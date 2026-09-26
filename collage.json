@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Elagoht/collage-snippets-highlighter/main/schemas/collage-plugin-manifest.schema.json",
+  "name": "elagoht/compress",
+  "description": "A collage plugin that compresses responses with Brotli and gzip.",
+  "repository": "https://github.com/Elagoht/collage-compress",
+  "config": {
+    "type": "object",
+    "description": "A collage plugin that compresses responses with Brotli and gzip.",
+    "properties": {
+      "brotliLevel": {
+        "type": "integer",
+        "description": "BrotliLevel is the Brotli level of a served response, 1 to 11. Default 5: above it Brotli grows slow enough to cost more time than the bytes it saves on a response compressed while the reader waits."
+      },
+      "buildBrotliLevel": {
+        "type": "integer"
+      },
+      "buildGzipLevel": {
+        "type": "integer",
+        "description": "BuildGzipLevel and BuildBrotliLevel are the levels of the files a static build writes, compressed once and served many times. Default 9 and 11."
+      },
+      "cacheBytes": {
+        "type": "integer",
+        "description": "CacheBytes bounds the cache of compressed bodies, in bytes. Default 32 MiB; negative turns the cache off."
+      },
+      "gzipLevel": {
+        "type": "integer",
+        "description": "GzipLevel is the gzip level of a served response, 1 to 9. Default 6."
+      },
+      "minSize": {
+        "type": "integer",
+        "description": "MinSize is the size in bytes below which a response is sent as it is: a small body gains a few bytes at best, and costs a compressor either way. Default 1024."
+      },
+      "noPrecompress": {
+        "type": "boolean",
+        "description": "NoPrecompress stops a static build from writing .br and .gz files."
+      },
+      "types": {
+        "type": "array",
+        "description": "Types are media types to compress beyond the built-in ones: \"font/ttf\", \"application/x-yaml\".",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
