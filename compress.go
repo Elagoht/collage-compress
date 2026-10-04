@@ -20,9 +20,12 @@
 // wrote, for a host that serves precompressed files (nginx's gzip_static and
 // brotli_static, Caddy's precompressed).
 //
-// Register it before any plugin that rewrites response bodies, such as
-// elagoht/secure: the first plugin registered is the outermost middleware, and a
-// body has to be rewritten before it is compressed, not after.
+// Order does not matter for elagoht/secure and elagoht/honeypot (v0.2.0 and v0.4.0
+// or later): they rewrite a page in collage's PersonaliseHook, before any
+// middleware sees it. Register compress before any other plugin that rewrites
+// response bodies in a middleware of its own: the first plugin registered is the
+// outermost middleware, and a body has to be rewritten before it is compressed,
+// not after.
 package compress
 
 import (
@@ -97,7 +100,7 @@ var (
 func New(opts Options) *Plugin { return &Plugin{opts: opts} }
 
 func (p *Plugin) Name() string                   { return Name }
-func (p *Plugin) Version() string                { return "0.1.2" }
+func (p *Plugin) Version() string                { return "0.1.3" }
 func (p *Plugin) Shutdown(context.Context) error { return nil }
 
 // Init reads the configuration, refuses a level no compressor has, and wraps

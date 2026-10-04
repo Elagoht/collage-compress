@@ -419,3 +419,73 @@ func contains(list []string, s string) bool {
 	}
 	return false
 }
+
+// A response a plugin personalises is private, and its ETag changes with every
+// response: keeping it would fill the cache with bodies nothing asks for again.
+// It is still compressed; it is only not kept.
+func TestPrivateNotCached(t *testing.T) {
+	for _, c := range []struct {
+		cacheControl string
+		cached       bool
+	}{
+		{"private, no-store", false},
+		{"no-store", false},
+		{"PRIVATE", false},
+		{"public, Private", false},
+		{"max-age=60,no-store", false},
+		{"public, max-age=60", true},
+		{"no-storex", true},
+		{"x-private", true},
+		{"", true},
+	} {
+		var calls atomic.Int32
+		app := site(t, compress.Options{}, func(app *collage.App) {
+			if err := app.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				n := calls.Add(1)
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("ETag", `"v1"`)
+				if c.cacheControl != "" {
+					w.Header().Set("Cache-Control", c.cacheControl)
+				}
+				_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
+			})); err != nil {
+				t.Fatal(err)
+			}
+		})
+		for i, n := range []int{1, 2} {
+			rec := get(app, "/api/x", "Accept-Encoding", "gzip")
+			want := n
+			if c.cached {
+				want = 1
+			}
+			if rec.Header().Get("Content-Encoding") != "gzip" || rec.Header().Get("ETag") != `"v1-gz"` {
+				t.Errorf("%q request %d: Content-Encoding %q, ETag %q", c.cacheControl, i, rec.Header().Get("Content-Encoding"), rec.Header().Get("ETag"))
+			}
+			if got := decode(t, "gzip", rec.Body.Bytes()); !strings.HasPrefix(got, `{"n":`+strconv.Itoa(want)+`,`) {
+				t.Errorf("%q request %d: body %.20q, want n=%d", c.cacheControl, i, got, want)
+			}
+		}
+	}
+}
+
+// The same holds for a body large enough to be compressed as it arrives.
+func TestPrivateNotCachedStreaming(t *testing.T) {
+	var calls atomic.Int32
+	app := site(t, compress.Options{}, func(app *collage.App) {
+		if err := app.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			n := calls.Add(1)
+			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set("ETag", `"v1"`)
+			w.Header().Set("Cache-Control", "private, no-store")
+			_, _ = w.Write([]byte(strconv.Itoa(int(n)) + strings.Repeat("streamed text, ", 8000)))
+		})); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for _, n := range []string{"1", "2"} {
+		got := decode(t, "gzip", get(app, "/api/x", "Accept-Encoding", "gzip").Body.Bytes())
+		if !strings.HasPrefix(got, n+"streamed") {
+			t.Errorf("body %.12q, want it to start with %q", got, n)
+		}
+	}
+}

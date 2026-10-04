@@ -50,9 +50,11 @@ type compressWriter struct {
 	state  writerState
 	status int
 	etag   string // the handler's own, before the suffix
-	body   bytes.Buffer
-	enc    encoder
-	tee    *teeWriter
+	// personal is a response marked private or no-store, kept out of the cache.
+	personal bool
+	body     bytes.Buffer
+	enc      encoder
+	tee      *teeWriter
 }
 
 func (w *compressWriter) WriteHeader(status int) {
@@ -125,6 +127,7 @@ func (w *compressWriter) decide(status int) {
 		return
 	}
 	w.etag = h.Get("ETag")
+	w.personal = personal(h.Values("Cache-Control"))
 	if body, ok := w.lookup(); ok {
 		w.encodingHeaders()
 		h.Set("Content-Length", strconv.Itoa(len(body)))
@@ -147,9 +150,27 @@ func (w *compressWriter) key() string { return w.etag + "\x00" + w.encoding }
 
 // cacheable reports whether the compressed body may be kept: a complete 200
 // response that names its content with an ETag, so the same key can never stand
-// for other bytes.
+// for other bytes. A private or no-store response is not kept: a plugin that
+// personalises a page gives it a new ETag every time, so what was kept would never
+// be asked for again and would only push out what is.
 func (w *compressWriter) cacheable() bool {
-	return w.p.cache != nil && w.status == http.StatusOK && w.etag != ""
+	return w.p.cache != nil && w.status == http.StatusOK && w.etag != "" && !w.personal
+}
+
+// personal reports whether a Cache-Control header, in any of its lines, carries
+// the private or no-store directive. Directive names are matched whole and
+// without regard to case.
+func personal(values []string) bool {
+	for _, v := range values {
+		for _, d := range strings.Split(v, ",") {
+			name, _, _ := strings.Cut(strings.TrimSpace(d), "=")
+			name = strings.TrimSpace(name)
+			if strings.EqualFold(name, "private") || strings.EqualFold(name, "no-store") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (w *compressWriter) lookup() ([]byte, bool) {

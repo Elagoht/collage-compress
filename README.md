@@ -14,12 +14,17 @@ app, err := collage.New(&collage.Config{
 })
 ```
 
-Requires collage v0.23.0 or later.
+Requires collage v0.43.0 or later.
 
-**Register it before any plugin that rewrites response bodies**, elagoht/secure
-among them. The first plugin registered is the outermost middleware, so it sees the
-body last; a plugin registered before it would be handed compressed bytes to
-search for its placeholder in.
+Order does not matter for elagoht/secure and elagoht/honeypot (v0.2.0 and v0.4.0
+or later): they rewrite a page in collage's `PersonaliseHook`, before any middleware
+sees it. **Register compress before any other plugin that rewrites response bodies**
+in a middleware of its own. The first plugin registered is the outermost middleware,
+so it sees the body last; a plugin registered before it would be handed compressed
+bytes to search for its placeholder in.
+
+A response whose `Cache-Control` carries `private` or `no-store`, such as a page
+personalised per response, is compressed but never kept in the cache.
 
 ## What is compressed
 
