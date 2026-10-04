@@ -435,6 +435,10 @@ func TestPrivateNotCached(t *testing.T) {
 		{"max-age=60,no-store", false},
 		{"public, max-age=60", true},
 		{"no-storex", true},
+		{"no-ſtore", true},
+		{"NO-STORE", false},
+		{"no-store=", false},
+		{"private = x", false},
 		{"x-private", true},
 		{"", true},
 	} {
@@ -486,6 +490,34 @@ func TestPrivateNotCachedStreaming(t *testing.T) {
 		got := decode(t, "gzip", get(app, "/api/x", "Accept-Encoding", "gzip").Body.Bytes())
 		if !strings.HasPrefix(got, n+"streamed") {
 			t.Errorf("body %.12q, want it to start with %q", got, n)
+		}
+	}
+}
+
+// A private response is not served from what a public response with the same ETag
+// left in the cache: it gets its own body.
+func TestPrivateIgnoresCachedPublic(t *testing.T) {
+	var calls atomic.Int32
+	app := site(t, compress.Options{}, func(app *collage.App) {
+		if err := app.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			n := calls.Add(1)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("ETag", `"v1"`)
+			if r.URL.Query().Get("private") != "" {
+				w.Header().Set("Cache-Control", "private")
+			}
+			_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
+		})); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for i, c := range []struct {
+		path string
+		n    int
+	}{{"/api/x", 1}, {"/api/x", 1}, {"/api/x?private=1", 3}} {
+		rec := get(app, c.path, "Accept-Encoding", "gzip")
+		if got := decode(t, "gzip", rec.Body.Bytes()); !strings.HasPrefix(got, `{"n":`+strconv.Itoa(c.n)+`,`) {
+			t.Errorf("request %d: body %.20q, want n=%d", i, got, c.n)
 		}
 	}
 }

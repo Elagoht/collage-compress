@@ -165,12 +165,31 @@ func personal(values []string) bool {
 		for _, d := range strings.Split(v, ",") {
 			name, _, _ := strings.Cut(strings.TrimSpace(d), "=")
 			name = strings.TrimSpace(name)
-			if strings.EqualFold(name, "private") || strings.EqualFold(name, "no-store") {
+			if equalASCIIFold(name, "private") || equalASCIIFold(name, "no-store") {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+// equalASCIIFold compares s with the lower-case ASCII name without regard to
+// ASCII case. Unlike strings.EqualFold it does not fold Unicode, so "no-ſtore"
+// (U+017F) is not "no-store".
+func equalASCIIFold(s, name string) bool {
+	if len(s) != len(name) {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		if c != name[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (w *compressWriter) lookup() ([]byte, bool) {
