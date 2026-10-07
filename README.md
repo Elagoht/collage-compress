@@ -135,7 +135,9 @@ media type stops the application from starting.
 ## Limitations
 
 - **Register it first.** A body-rewriting plugin registered before it sees
-  compressed bytes. The plugin cannot tell, so it cannot refuse.
+  compressed bytes. The plugin cannot tell, so it cannot refuse. `elagoht/health`
+  may be listed before or after it: compress only re-encodes, and health's bodies
+  are tiny.
 - **No `deflate` or `zstd`.** Every client that accepts either accepts gzip.
 - **No compression of `Range` requests**, and so none of a resumed download.
 - **A `HEAD` request whose handler writes no body** is answered with the headers
@@ -145,3 +147,9 @@ media type stops the application from starting.
   compresses (or answers from its cache); the `.br` and `.gz` files are for a
   static host. A mount that holds precompressed files of its own serves them under
   their own names and types.
+
+## Changes
+
+### v0.1.7
+
+- Docs only: the README says `elagoht/health` may be listed before or after the plugin. Nothing else changes.
