@@ -1,5 +1,5 @@
-github.com/Elagoht/collage v0.43.0 h1:B6LblZNVRbz0uJti8ZcqcbMu+Jbk9PVzEPjFHFxOCA0=
-github.com/Elagoht/collage v0.43.0/go.mod h1:tyGWGpujZXtCFFxn9pjws85HOFOt4QdiuRswwQhj1Qw=
+github.com/Elagoht/collage v0.50.0 h1:5fcYkcr/8ZmyvLf7RN2HHC4vCH4YgXb7HVdDChOhiSc=
+github.com/Elagoht/collage v0.50.0/go.mod h1:tyGWGpujZXtCFFxn9pjws85HOFOt4QdiuRswwQhj1Qw=
 github.com/andybalholm/brotli v1.2.5 h1:BSI8V4zmx/3BAn6OKjF1PmfVq7Aoi52AdFsi6bpCx+s=
 github.com/andybalholm/brotli v1.2.5/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=

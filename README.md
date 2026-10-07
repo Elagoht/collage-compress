@@ -14,7 +14,7 @@ app, err := collage.New(&collage.Config{
 })
 ```
 
-Requires collage v0.43.0 or later.
+Requires collage v0.50.0 or later.
 
 Order does not matter for elagoht/secure and elagoht/honeypot (v0.2.0 and v0.4.0
 or later): they rewrite a page in collage's `PersonaliseHook`, before any middleware

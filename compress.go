@@ -100,15 +100,17 @@ var (
 func New(opts Options) *Plugin { return &Plugin{opts: opts} }
 
 func (p *Plugin) Name() string                   { return Name }
-func (p *Plugin) Version() string                { return "0.1.3" }
+func (p *Plugin) Version() string                { return "0.1.4" }
 func (p *Plugin) Shutdown(context.Context) error { return nil }
 
 // Init reads the configuration, refuses a level no compressor has, and wraps
 // every request.
 func (p *Plugin) Init(_ context.Context, host collage.Host) error {
-	if err := host.Config(&p.opts); err != nil {
+	cfg, err := collage.PluginConfig(host, p.opts)
+	if err != nil {
 		return err
 	}
+	p.opts = cfg
 	p.logger = host.Logger()
 	o := &p.opts
 	if o.MinSize < 0 {
