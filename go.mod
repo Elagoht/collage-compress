@@ -5,7 +5,7 @@ module github.com/Elagoht/collage-compress
 
 go 1.26
 
-require github.com/Elagoht/collage v0.50.0
+require github.com/Elagoht/collage v0.55.0
 
 require github.com/andybalholm/brotli v1.2.5
 

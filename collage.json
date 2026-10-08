@@ -34,6 +34,10 @@
         "type": "boolean",
         "description": "NoPrecompress stops a static build from writing .br and .gz files."
       },
+      "skipPrivate": {
+        "type": "boolean",
+        "description": "SkipPrivate sends a response whose Cache-Control carries private or no-store uncompressed. Such a response is usually one reader's — a CSRF token, a session's data — and compressing a secret beside input an attacker controls lets them read it from the compressed length (BREACH). Default false. A static build's .br and .gz files are not affected."
+      },
       "types": {
         "type": "array",
         "description": "Types are media types to compress beyond the built-in ones: \"font/ttf\", \"application/x-yaml\".",

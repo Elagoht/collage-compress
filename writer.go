@@ -118,6 +118,14 @@ func (w *compressWriter) decide(status int) {
 		w.ResponseWriter.WriteHeader(status)
 		return
 	}
+	// A private or no-store response is one reader's, and may carry a secret
+	// beside what that reader sent: with SkipPrivate it is not compressed, so its
+	// length says nothing about how well the two compress together (BREACH). It
+	// does not depend on Accept-Encoding then, and gets no Vary.
+	if w.p.opts.SkipPrivate && personal(h.Values("Cache-Control")) {
+		w.ResponseWriter.WriteHeader(status)
+		return
+	}
 	// The response depends on Accept-Encoding whether or not this one is
 	// compressed: a cache in front must not hand this reader's version to one
 	// that accepts something else.

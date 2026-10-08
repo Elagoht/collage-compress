@@ -78,6 +78,12 @@ type Options struct {
 	Types []string `json:"types"`
 	// NoPrecompress stops a static build from writing .br and .gz files.
 	NoPrecompress bool `json:"noPrecompress"`
+	// SkipPrivate sends a response whose Cache-Control carries private or
+	// no-store uncompressed. Such a response is usually one reader's — a CSRF
+	// token, a session's data — and compressing a secret beside input an attacker
+	// controls lets them read it from the compressed length (BREACH). Default
+	// false. A static build's .br and .gz files are not affected.
+	SkipPrivate bool `json:"skipPrivate"`
 }
 
 // Plugin compresses responses.
@@ -100,7 +106,7 @@ var (
 func New(opts Options) *Plugin { return &Plugin{opts: opts} }
 
 func (p *Plugin) Name() string                   { return Name }
-func (p *Plugin) Version() string                { return "0.1.7" }
+func (p *Plugin) Version() string                { return "0.1.8" }
 func (p *Plugin) Shutdown(context.Context) error { return nil }
 
 // Init reads the configuration, refuses a level no compressor has, and wraps
