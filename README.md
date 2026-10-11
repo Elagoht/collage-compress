@@ -14,7 +14,7 @@ app, err := collage.New(&collage.Config{
 })
 ```
 
-Requires collage v0.55.0 or later.
+Requires collage v0.58.0 or later.
 
 Order does not matter for elagoht/secure and elagoht/honeypot (v0.2.0 and v0.4.0
 or later): they rewrite a page in collage's `PersonaliseHook`, before any middleware
@@ -187,6 +187,12 @@ media type stops the application from starting.
   their own names and types.
 
 ## Changes
+
+### v0.1.9
+
+- collage.json has `order` −20, so `collage plugin add` lists it before any
+  plugin that rewrites response bodies.
+- Requires collage v0.58.0.
 
 ### v0.1.8
 
