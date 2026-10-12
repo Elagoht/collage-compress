@@ -20,6 +20,7 @@ import (
 
 	compress "github.com/Elagoht/collage-compress"
 	"github.com/Elagoht/collage/pkg/collage"
+	"github.com/Elagoht/collage/pkg/collagetest"
 	"github.com/andybalholm/brotli"
 )
 
@@ -242,7 +243,7 @@ func TestCacheByETag(t *testing.T) {
 		name   string
 		opts   compress.Options
 		cached bool
-	}{{"default", compress.Options{}, true}, {"cache off", compress.Options{CacheBytes: -1}, false}} {
+	}{{"default", compress.Options{}, true}, {"cache off", compress.Options{NoCache: true}, false}} {
 		calls.Store(0)
 		app := site(t, c.opts, func(app *collage.App) {
 			if err := app.Handle("/api/", handler); err != nil {
@@ -335,10 +336,39 @@ func TestMisconfiguration(t *testing.T) {
 		"build level":  {BuildBrotliLevel: -1},
 		"min size":     {MinSize: -5},
 		"type":         {Types: []string{"nonsense"}},
+		"cache bytes":  {CacheBytes: -1},
 	} {
-		if rec := get(site(t, opts, nil), "/"); rec.Code != http.StatusServiceUnavailable {
-			t.Errorf("%s: %d, want 503", name, rec.Code)
+		if _, err := collagetest.TrySite(t, collagetest.WithPlugins(compress.New(opts))); err == nil {
+			t.Errorf("%s: the application started", name)
 		}
+	}
+}
+
+// noCache from the configuration compresses every response afresh.
+func TestNoCacheFromConfiguration(t *testing.T) {
+	var calls atomic.Int32
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("ETag", `"v1"`)
+		_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
+	})
+	// Built by hand: Handle has to come before Start, which NewSite runs.
+	app, err := collage.New(&collage.Config{
+		Server:       collage.ServerConfig{Host: "localhost", Port: 3000},
+		Template:     collage.TemplateConfig{FS: fstest.MapFS{"t/p.html": {Data: []byte(`<p></p>`)}}, Root: "t"},
+		Plugins:      []collage.Plugin{compress.New(compress.Options{})},
+		PluginConfig: map[string]json.RawMessage{compress.Name: json.RawMessage(`{"noCache": true}`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Handle("/api/", handler); err != nil {
+		t.Fatal(err)
+	}
+	get(app, "/api/x", "Accept-Encoding", "br")
+	if got := decode(t, "br", get(app, "/api/x", "Accept-Encoding", "br").Body.Bytes()); !strings.HasPrefix(got, `{"n":2,`) {
+		t.Errorf("second body %.20q, want it compressed afresh", got)
 	}
 }
 

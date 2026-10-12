@@ -21,7 +21,7 @@
       },
       "cacheBytes": {
         "type": "integer",
-        "description": "CacheBytes bounds the cache of compressed bodies, in bytes. Default 32 MiB; negative turns the cache off."
+        "description": "CacheBytes bounds the cache of compressed bodies, in bytes. Default 32 MiB; a negative size stops the application at start."
       },
       "gzipLevel": {
         "type": "integer",
@@ -30,6 +30,10 @@
       "minSize": {
         "type": "integer",
         "description": "MinSize is the size in bytes below which a response is sent as it is: a small body gains a few bytes at best, and costs a compressor either way. Default 1024."
+      },
+      "noCache": {
+        "type": "boolean",
+        "description": "NoCache compresses every response afresh, keeping no cache of compressed bodies."
       },
       "noPrecompress": {
         "type": "boolean",

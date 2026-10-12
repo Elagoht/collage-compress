@@ -357,7 +357,7 @@ func (t *teeWriter) Write(b []byte) (int, error) {
 
 // encoder takes a compressor for encoding from its pool.
 func (p *Plugin) encoder(encoding string) encoder {
-	if encoding == Brotli {
+	if encoding == brotliEncoding {
 		return p.brots.Get().(encoder)
 	}
 	return p.gzips.Get().(encoder)
@@ -367,7 +367,7 @@ func (p *Plugin) encoder(encoding string) encoder {
 // not keep the response it wrote to alive.
 func (p *Plugin) release(encoding string, enc encoder) {
 	enc.Reset(io.Discard)
-	if encoding == Brotli {
+	if encoding == brotliEncoding {
 		p.brots.Put(enc)
 		return
 	}

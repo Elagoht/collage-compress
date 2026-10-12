@@ -14,7 +14,7 @@ app, err := collage.New(&collage.Config{
 })
 ```
 
-Requires collage v0.58.0 or later.
+Requires collage v0.61.0 or later.
 
 Order does not matter for elagoht/secure and elagoht/honeypot (v0.2.0 and v0.4.0
 or later): they rewrite a page in collage's `PersonaliseHook`, before any middleware
@@ -84,7 +84,7 @@ compressed once per encoding for as long as they stay the same.
 
 This trusts the ETag to name the bytes. A handler of your own that sends one ETag
 for two different bodies is answered with the first body it compressed; turn the
-cache off with a negative `CacheBytes` if you have such a handler. No single body
+cache off with `noCache` if you have such a handler. No single body
 larger than an eighth of `CacheBytes` is kept.
 
 A body is held back until it is 64 KiB or the handler returns. One that ends first
@@ -147,12 +147,13 @@ build. `NoPrecompress` turns this off.
 | `BrotliLevel` | `5` | Brotli level of a served response, 1–11. Above 5 Brotli costs more time than the bytes it saves while a reader waits |
 | `BuildGzipLevel` | `9` | gzip level of a static build's `.gz` files |
 | `BuildBrotliLevel` | `11` | Brotli level of a static build's `.br` files |
-| `CacheBytes` | 32 MiB | Bound of the compressed-body cache; negative turns it off |
+| `CacheBytes` | 32 MiB | Bound of the compressed-body cache |
+| `NoCache` | `false` | Keep no compressed-body cache: every response is compressed afresh |
 | `Types` | none | Media types to compress beyond the built-in ones |
 | `NoPrecompress` | `false` | A static build writes no `.br` or `.gz` files |
 | `SkipPrivate` | `false` | A response whose `Cache-Control` carries `private` or `no-store` is sent uncompressed. See [BREACH](#breach) |
 
-A level outside its range, a negative `MinSize` or a `Types` entry that is not a
+A level outside its range, a negative `MinSize` or `CacheBytes`, or a `Types` entry that is not a
 media type stops the application from starting.
 
 ## Configuration
@@ -187,6 +188,18 @@ media type stops the application from starting.
   their own names and types.
 
 ## Changes
+
+### v0.2.0
+
+Changed in v0.2.0, for the v1 plugin conventions:
+
+| was | now |
+|---|---|
+| `"cacheBytes": -1` (cache off) | `"noCache": true`; a negative `cacheBytes` now stops the application |
+| `compress.Brotli`, `compress.Gzip` | removed: write `"br"` and `"gzip"` |
+
+- `skipPrivate` keeps its default, `false`.
+- Requires collage v0.61.0.
 
 ### v0.1.10
 

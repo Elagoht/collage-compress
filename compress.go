@@ -50,8 +50,8 @@ const Name = "elagoht/compress"
 // The encodings the plugin produces, as Accept-Encoding and Content-Encoding
 // name them.
 const (
-	Brotli = "br"
-	Gzip   = "gzip"
+	brotliEncoding = "br"
+	gzipEncoding   = "gzip"
 )
 
 // Options configures the plugin. A zero value is a default.
@@ -71,8 +71,11 @@ type Options struct {
 	BuildGzipLevel   int `json:"buildGzipLevel"`
 	BuildBrotliLevel int `json:"buildBrotliLevel"`
 	// CacheBytes bounds the cache of compressed bodies, in bytes. Default 32 MiB;
-	// negative turns the cache off.
+	// a negative size stops the application at start.
 	CacheBytes int `json:"cacheBytes"`
+	// NoCache compresses every response afresh, keeping no cache of compressed
+	// bodies.
+	NoCache bool `json:"noCache"`
 	// Types are media types to compress beyond the built-in ones: "font/ttf",
 	// "application/x-yaml".
 	Types []string `json:"types"`
@@ -106,7 +109,7 @@ var (
 func New(opts Options) *Plugin { return &Plugin{opts: opts} }
 
 func (p *Plugin) Name() string                   { return Name }
-func (p *Plugin) Version() string                { return "0.1.10" }
+func (p *Plugin) Version() string                { return "0.2.0" }
 func (p *Plugin) Shutdown(context.Context) error { return nil }
 
 // Init reads the configuration, refuses a level no compressor has, and wraps
@@ -151,11 +154,13 @@ func (p *Plugin) Init(_ context.Context, host collage.Host) error {
 		}
 		p.types[media] = true
 	}
-	switch {
-	case o.CacheBytes == 0:
+	if o.CacheBytes < 0 {
+		return fmt.Errorf("compress: cacheBytes %d is negative; noCache turns the cache off", o.CacheBytes)
+	}
+	if o.CacheBytes == 0 {
 		o.CacheBytes = 32 << 20
-		p.cache = newLRU(o.CacheBytes)
-	case o.CacheBytes > 0:
+	}
+	if !o.NoCache {
 		p.cache = newLRU(o.CacheBytes)
 	}
 	gzipLevel, brotliLevel := o.GzipLevel, o.BrotliLevel
@@ -224,7 +229,7 @@ func negotiate(header string) string {
 		if w, ok := q[coding]; ok {
 			return w > 0
 		}
-		if coding == Gzip {
+		if coding == gzipEncoding {
 			if w, ok := q["x-gzip"]; ok {
 				return w > 0
 			}
@@ -233,17 +238,17 @@ func negotiate(header string) string {
 		return ok && w > 0
 	}
 	switch {
-	case accepts(Brotli):
-		return Brotli
-	case accepts(Gzip):
-		return Gzip
+	case accepts(brotliEncoding):
+		return brotliEncoding
+	case accepts(gzipEncoding):
+		return gzipEncoding
 	}
 	return ""
 }
 
 // suffix is what an encoding adds to an ETag.
 func suffix(encoding string) string {
-	if encoding == Brotli {
+	if encoding == brotliEncoding {
 		return "-br"
 	}
 	return "-gz"
