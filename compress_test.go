@@ -363,11 +363,7 @@ func TestConfiguration(t *testing.T) {
 func TestStaticBuild(t *testing.T) {
 	out := t.TempDir()
 	app := site(t, compress.Options{}, nil)
-	b, err := collage.NewBuilder(app, collage.BuildOptions{OutDir: out})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := b.Build(context.Background()); err != nil {
+	if _, err := collage.Build(context.Background(), app, collage.BuildOptions{OutDir: out}); err != nil {
 		t.Fatal(err)
 	}
 	var index string
@@ -402,8 +398,7 @@ func TestStaticBuild(t *testing.T) {
 	}
 
 	out2 := t.TempDir()
-	b, _ = collage.NewBuilder(site(t, compress.Options{NoPrecompress: true}, nil), collage.BuildOptions{OutDir: out2})
-	if _, err := b.Build(context.Background()); err != nil {
+	if _, err := collage.Build(context.Background(), site(t, compress.Options{NoPrecompress: true}, nil), collage.BuildOptions{OutDir: out2}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(out2, "index.html.br")); err == nil {

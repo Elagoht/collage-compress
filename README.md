@@ -188,6 +188,11 @@ media type stops the application from starting.
 
 ## Changes
 
+### v0.1.10
+
+- Rebuilt against collage v0.60.0; the plugin's code is unchanged.
+- Requires collage v0.60.0.
+
 ### v0.1.9
 
 - collage.json has `order` −20, so `collage plugin add` lists it before any
