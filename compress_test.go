@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,37 +28,32 @@ var big = "<html><body>" + strings.Repeat("<p>collage compresses this paragraph.
 
 func site(t *testing.T, opts compress.Options, extra func(app *collage.App)) *collage.App {
 	t.Helper()
-	app, err := collage.New(&collage.Config{
-		Server: collage.ServerConfig{Host: "localhost", Port: 3000},
-		Template: collage.TemplateConfig{FS: fstest.MapFS{
-			"t/big.html":   {Data: []byte(big)},
-			"t/small.html": {Data: []byte(`<p>small</p>`)},
-		}, Root: "t"},
-		Cache:   collage.CacheConfig{Enabled: true, Type: "memory", DefaultTTL: time.Hour},
-		Plugins: []collage.Plugin{compress.New(opts)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range []*collage.Page{
-		collage.NewPage("big").WithContent(collage.NewFragment("big", "big.html").Build()).WithPath("en", "/").Static().Build(),
-		collage.NewPage("small").WithContent(collage.NewFragment("small", "small.html").Build()).WithPath("en", "/small").Static().Build(),
-	} {
-		if err := app.RegisterPage(p); err != nil {
-			t.Fatal(err)
-		}
-	}
 	png := append([]byte("\x89PNG\r\n\x1a\n"), bytes.Repeat([]byte{0}, 4096)...)
-	if err := app.RegisterDocument(collage.NewDocument("logo", "image/png").AtRoot("/logo.png").WithBody(png).Build()); err != nil {
-		t.Fatal(err)
-	}
-	if err := app.Mount("/static/", fstest.MapFS{"app.css": {Data: []byte(strings.Repeat("body { color: red; }\n", 200)), ModTime: time.Unix(1, 0)}}); err != nil {
-		t.Fatal(err)
-	}
-	if extra != nil {
-		extra(app)
-	}
-	return app
+	return collagetest.NewSite(t,
+		collagetest.WithoutHome(),
+		collagetest.WithTemplates(map[string]string{
+			"big.html":   big,
+			"small.html": `<p>small</p>`,
+		}),
+		collagetest.WithConfig(func(cfg *collage.Config) {
+			cfg.Cache = collage.CacheConfig{Enabled: true, Type: "memory", DefaultTTL: time.Hour}
+		}),
+		collagetest.WithPlugins(compress.New(opts)),
+		collagetest.WithRegister(
+			collage.NewPage("big").WithContent(collage.NewFragment("big", "big.html").Build()).WithPath("en", "/").Static().Build(),
+			collage.NewPage("small").WithContent(collage.NewFragment("small", "small.html").Build()).WithPath("en", "/small").Static().Build(),
+			collage.NewDocument("logo", "image/png").AtRoot("/logo.png").WithBody(png).Build(),
+		),
+		collagetest.WithSetup(func(app *collage.App) error {
+			if err := app.Mount("/static/", fstest.MapFS{"app.css": {Data: []byte(strings.Repeat("body { color: red; }\n", 200)), ModTime: time.Unix(1, 0)}}); err != nil {
+				return err
+			}
+			if extra != nil {
+				extra(app)
+			}
+			return nil
+		}),
+	).App
 }
 
 func get(app *collage.App, path string, headers ...string) *httptest.ResponseRecorder {
@@ -353,19 +347,11 @@ func TestNoCacheFromConfiguration(t *testing.T) {
 		w.Header().Set("ETag", `"v1"`)
 		_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
 	})
-	// Built by hand: Handle has to come before Start, which NewSite runs.
-	app, err := collage.New(&collage.Config{
-		Server:       collage.ServerConfig{Host: "localhost", Port: 3000},
-		Template:     collage.TemplateConfig{FS: fstest.MapFS{"t/p.html": {Data: []byte(`<p></p>`)}}, Root: "t"},
-		Plugins:      []collage.Plugin{compress.New(compress.Options{})},
-		PluginConfig: map[string]json.RawMessage{compress.Name: json.RawMessage(`{"noCache": true}`)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.Handle("/api/", handler); err != nil {
-		t.Fatal(err)
-	}
+	app := collagetest.NewSite(t,
+		collagetest.WithPlugins(compress.New(compress.Options{})),
+		collagetest.WithPluginConfig(compress.Name, `{"noCache": true}`),
+		collagetest.WithSetup(func(app *collage.App) error { return app.Handle("/api/", handler) }),
+	).App
 	get(app, "/api/x", "Accept-Encoding", "br")
 	if got := decode(t, "br", get(app, "/api/x", "Accept-Encoding", "br").Body.Bytes()); !strings.HasPrefix(got, `{"n":2,`) {
 		t.Errorf("second body %.20q, want it compressed afresh", got)
@@ -373,18 +359,13 @@ func TestNoCacheFromConfiguration(t *testing.T) {
 }
 
 func TestConfiguration(t *testing.T) {
-	app, err := collage.New(&collage.Config{
-		Server:       collage.ServerConfig{Host: "localhost", Port: 3000},
-		Template:     collage.TemplateConfig{FS: fstest.MapFS{"t/small.html": {Data: []byte(`<p>small, but compressed anyway</p>`)}}, Root: "t"},
-		Plugins:      []collage.Plugin{compress.New(compress.Options{})},
-		PluginConfig: map[string]json.RawMessage{"elagoht/compress": json.RawMessage(`{"minSize": 1}`)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.RegisterPage(collage.NewPage("small").WithContent(collage.NewFragment("small", "small.html").Build()).WithPath("en", "/").Build()); err != nil {
-		t.Fatal(err)
-	}
+	app := collagetest.NewSite(t,
+		collagetest.WithoutHome(),
+		collagetest.WithTemplates(map[string]string{"small.html": `<p>small, but compressed anyway</p>`}),
+		collagetest.WithPlugins(compress.New(compress.Options{})),
+		collagetest.WithPluginConfig(compress.Name, `{"minSize": 1}`),
+		collagetest.WithRegister(collage.NewPage("small").WithContent(collage.NewFragment("small", "small.html").Build()).WithPath("en", "/").Build()),
+	).App
 	if rec := get(app, "/", "Accept-Encoding", "gzip"); rec.Header().Get("Content-Encoding") != "gzip" {
 		t.Errorf("minSize from configuration was not applied: %v", rec.Header())
 	}

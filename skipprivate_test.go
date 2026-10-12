@@ -1,14 +1,13 @@
 package compress_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
-	"testing/fstest"
 
 	compress "github.com/Elagoht/collage-compress"
 	"github.com/Elagoht/collage/pkg/collage"
+	"github.com/Elagoht/collage/pkg/collagetest"
 )
 
 // privateSite serves /api/x with the Cache-Control lines the request's "cc"
@@ -80,22 +79,17 @@ func TestSkipPrivateIsOffByDefault(t *testing.T) {
 
 // skipPrivate is read from the application's configuration.
 func TestSkipPrivateFromConfiguration(t *testing.T) {
-	app, err := collage.New(&collage.Config{
-		Server:       collage.ServerConfig{Host: "localhost", Port: 3000},
-		Template:     collage.TemplateConfig{FS: fstest.MapFS{"t/p.html": {Data: []byte(`<p></p>`)}}, Root: "t"},
-		Plugins:      []collage.Plugin{compress.New(compress.Options{})},
-		PluginConfig: map[string]json.RawMessage{"elagoht/compress": json.RawMessage(`{"skipPrivate": true}`)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "private")
-		_, _ = w.Write([]byte(strings.Repeat("<p>padding</p>", 200)))
-	})); err != nil {
-		t.Fatal(err)
-	}
+	app := collagetest.NewSite(t,
+		collagetest.WithPlugins(compress.New(compress.Options{})),
+		collagetest.WithPluginConfig(compress.Name, `{"skipPrivate": true}`),
+		collagetest.WithSetup(func(app *collage.App) error {
+			return app.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Header().Set("Cache-Control", "private")
+				_, _ = w.Write([]byte(strings.Repeat("<p>padding</p>", 200)))
+			}))
+		}),
+	).App
 	if rec := get(app, "/api/x", "Accept-Encoding", "gzip"); rec.Header().Get("Content-Encoding") != "" {
 		t.Errorf("skipPrivate from configuration was not applied: %v", rec.Header())
 	}
