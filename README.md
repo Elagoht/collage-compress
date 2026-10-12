@@ -165,6 +165,7 @@ media type stops the application from starting.
     "gzipLevel": 6,
     "brotliLevel": 4,
     "cacheBytes": 67108864,
+    "noCache": false,
     "types": ["application/x-yaml"],
     "skipPrivate": true
   }
