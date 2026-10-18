@@ -173,14 +173,14 @@ func TestLeftAlone(t *testing.T) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.Header().Set("Content-Encoding", "gzip")
 			_, _ = w.Write([]byte(big))
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 		if err := app.Handle("/events/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/event-stream")
 			_, _ = w.Write([]byte("data: " + big + "\n\n"))
 			http.NewResponseController(w).Flush()
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -240,7 +240,7 @@ func TestCacheByETag(t *testing.T) {
 	}{{"default", compress.Options{}, true}, {"cache off", compress.Options{NoCache: true}, false}} {
 		calls.Store(0)
 		app := site(t, c.opts, func(app *collage.App) {
-			if err := app.Handle("/api/", handler); err != nil {
+			if err := app.Handle("/api/", handler, collage.WithMiddleware()); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -275,7 +275,7 @@ func TestStreaming(t *testing.T) {
 			}
 			http.NewResponseController(w).Flush()
 			_, _ = io.WriteString(w, "end")
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -304,7 +304,7 @@ func TestHijack(t *testing.T) {
 			defer conn.Close()
 			_, _ = rw.WriteString("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\nConnection: close\r\n\r\nraw ok")
 			_ = rw.Flush()
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -350,7 +350,7 @@ func TestNoCacheFromConfiguration(t *testing.T) {
 	app := collagetest.NewSite(t,
 		collagetest.WithPlugins(compress.New(compress.Options{})),
 		collagetest.WithPluginConfig(compress.Name, `{"noCache": true}`),
-		collagetest.WithSetup(func(app *collage.App) error { return app.Handle("/api/", handler) }),
+		collagetest.WithSetup(func(app *collage.App) error { return app.Handle("/api/", handler, collage.WithMiddleware()) }),
 	).App
 	get(app, "/api/x", "Accept-Encoding", "br")
 	if got := decode(t, "br", get(app, "/api/x", "Accept-Encoding", "br").Body.Bytes()); !strings.HasPrefix(got, `{"n":2,`) {
@@ -458,7 +458,7 @@ func TestPrivateNotCached(t *testing.T) {
 					w.Header().Set("Cache-Control", c.cacheControl)
 				}
 				_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
-			})); err != nil {
+			}), collage.WithMiddleware()); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -488,7 +488,7 @@ func TestPrivateNotCachedStreaming(t *testing.T) {
 			w.Header().Set("ETag", `"v1"`)
 			w.Header().Set("Cache-Control", "private, no-store")
 			_, _ = w.Write([]byte(strconv.Itoa(int(n)) + strings.Repeat("streamed text, ", 8000)))
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -513,7 +513,7 @@ func TestPrivateIgnoresCachedPublic(t *testing.T) {
 				w.Header().Set("Cache-Control", "private")
 			}
 			_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(int(n)) + `,"pad":"` + strings.Repeat("x", 2000) + `"}`))
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})

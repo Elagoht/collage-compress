@@ -21,7 +21,7 @@ func privateSite(t *testing.T, opts compress.Options) *collage.App {
 				w.Header().Add("Cache-Control", line)
 			}
 			_, _ = w.Write([]byte(`<p>csrf=SECRET</p>` + strings.Repeat("<p>padding</p>", 200)))
-		})); err != nil {
+		}), collage.WithMiddleware()); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -87,7 +87,7 @@ func TestSkipPrivateFromConfiguration(t *testing.T) {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				w.Header().Set("Cache-Control", "private")
 				_, _ = w.Write([]byte(strings.Repeat("<p>padding</p>", 200)))
-			}))
+			}), collage.WithMiddleware())
 		}),
 	).App
 	if rec := get(app, "/api/x", "Accept-Encoding", "gzip"); rec.Header().Get("Content-Encoding") != "" {
