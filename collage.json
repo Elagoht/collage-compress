@@ -4,6 +4,7 @@
   "description": "A collage plugin that compresses responses with Brotli and gzip.",
   "repository": "https://github.com/Elagoht/collage-compress",
   "order": -20,
+  "setup": "Works on its own: Brotli or gzip for every text response, and `.br`/`.gz` files beside what `collage export` writes.\nKeep it listed in `plugins.go` before any plugin that rewrites response bodies in a middleware of its own.",
   "config": {
     "type": "object",
     "description": "A collage plugin that compresses responses with Brotli and gzip.",
