@@ -111,7 +111,11 @@ input. The mitigations, from the most to the least complete:
   attacker-controlled bytes beside it, there is nothing to compare the secret to.
 - **Mask the secret per response.** A token XORed with a fresh random value on
   every response — as Rails, Django and gorilla/csrf do — is never the same bytes
-  twice, so there is nothing to guess one character at a time.
+  twice, so there is nothing to guess one character at a time. collage does this
+  for its own forgery token since v0.72.0, whatever compresses the response — this
+  plugin, a proxy or a CDN — so `{{csrfToken}}` needs nothing from you. A secret of
+  your own on a page that reflects input (an email address, an API key shown to its
+  owner) is not masked: that is what `SkipPrivate` is for.
 - **Do not compress responses that carry a secret.** Turn on `SkipPrivate`: a
   response whose `Cache-Control` carries `private` or `no-store` — what a page
   personalised per reader is sent with — is sent uncompressed. It costs those
